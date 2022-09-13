@@ -11,8 +11,8 @@ Desgloce de documentos:
 
 Archivo practica 1: trae los pasos de como se desarrollo la practica.
 carpeta archivos ansible:
-el archivo basededatos.yml es el playbook para crear la base de datos
-el archivo practica1.yml es el playbook que controla todo se encarga de actuaizar los paquetes, instalar las apps, configurar las apps y copiar los archivos web.
-la carpeta vars tiene el archivo default.yml que es donde estan cargadas las configuraciones por defecto.
-la carpeta files tiene el archivo de configuracion para php y el de informacion.
-la carpeta sitio tiene tiene los archivos de la pagina web y de la base de datos.
+* El archivo basededatos.yml es el playbook para crear la base de datos
+* El archivo practica1.yml es el playbook que controla todo se encarga de actuaizar los paquetes, instalar las apps, configurar las apps y copiar los archivos web.
+* La carpeta vars tiene el archivo default.yml que es donde estan cargadas las configuraciones por defecto.
+* La carpeta files tiene el archivo de configuracion para php y el de informacion.
+* La carpeta sitio tiene tiene los archivos de la pagina web y de la base de datos.
