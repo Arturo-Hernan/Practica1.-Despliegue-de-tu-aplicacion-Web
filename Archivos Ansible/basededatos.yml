@@ -1,0 +1,11 @@
+---
+- hosts: all
+  become: true
+  
+  tasks:
+    - name: create a new database
+      mysql_db: name=scorestore state=present login_user=root login_password="admin"
+    - name: add sample data to database
+      copy: src=sitio/scorestore.sql dest=/tmp/scorestore.sql
+    - name: insert sample data into database
+      mysql_db: name=scorestore state=import target=/tmp/scorestore.sql login_password="admin"

@@ -1,0 +1,224 @@
+cd Público/ansible/
+nano practica1.yml
+
+dentro de archivo:
+######################################################
+
+---
+- hosts: all
+  become: true
+  vars_files:
+    - vars/default.yml
+
+  tasks:
+    - name: Install prerequisites
+      apt: name={{ item }} update_cache=yes state=latest force_apt_get=yes
+      loop: [ 'aptitude' ]
+
+  #Apache Configuracion
+    - name: Install LAMP Packages
+      apt: name={{ item }} update_cache=yes state=latest
+      loop: [ 'apache2', 'mysql-server', 'python3-pymysql', 'php', 'php-mysql', 'libapache2-mod-php' ]
+
+    - name: Create document root
+      file:
+        path: "/var/www/{{ http_host }}"
+        state: directory
+        owner: "{{ app_user }}"
+        mode: '0755'
+
+    - name: Set up Apache virtualhost
+      template:
+        src: "files/apache.conf.j2"
+        dest: "/etc/apache2/sites-available/{{ http_conf }}"
+      notify: Reload Apache
+
+    - name: Enable new site
+      shell: /usr/sbin/a2ensite {{ http_conf }}
+      notify: Reload Apache
+
+    - name: Disable default Apache site
+      shell: /usr/sbin/a2dissite 000-default.conf
+      when: disable_default
+      notify: Reload Apache
+
+  # MySQL Configuracion
+    - name: Sets the root password
+      mysql_user:
+        login_user: root
+        login_password: "admin"
+        name: root
+        password: "{{ mysql_root_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+
+    - name: Removes all anonymous user accounts
+      mysql_user:
+        name: ''
+        host_all: yes
+        state: absent
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: Removes the MySQL test database
+      mysql_db:
+        name: test
+        state: absent
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+  # UFW Configuracion
+    - name: "UFW - Allow HTTP on port {{ http_port }}"
+      ufw:
+        rule: allow
+        port: "{{ http_port }}"
+        proto: tcp
+
+  # PHP Info Page
+    - name: Sets Up PHP Info Page
+      template:
+        src: "files/info.php.j2"
+        dest: "/var/www/{{ http_host }}/info.php"
+    - name: Ansible copy directory to the remote server
+      copy:
+        src: "sitio/www/"
+        dest: "/var/www/{{ http_host }}/"
+
+  handlers:
+    - name: Reload Apache
+      service:
+        name: apache2
+        state: reloaded
+
+    - name: Restart Apache
+      service:
+        name: apache2
+        state: restarted  
+      
+      
+################################################# 
+
+nano basededatos.yml
+
+dentro de archivo:
+#################################################
+
+---
+- hosts: all
+  become: true
+  
+  tasks:
+    - name: create a new database
+      mysql_db: name=scorestore state=present login_user=root login_password="admin"
+    - name: add sample data to database
+      copy: src=sitio/scorestore.sql dest=/tmp/scorestore.sql
+    - name: insert sample data into database
+      mysql_db: name=scorestore state=import target=/tmp/scorestore.sql login_password="admin"
+
+##################################################
+
+nano vars/default.yml
+
+dentro de archivo:
+##################################################
+
+---
+mysql_root_password: "admin"
+app_user: "luis"
+http_host: "www.lhernandez.com"
+http_conf: "www.lhernandez.com.conf"
+http_port: "80"
+disable_default: true
+
+
+###################################################
+
+nano files/apache.conf.j2
+
+dentro de archivo:
+####################################################
+
+<VirtualHost *:{{ http_port }}>
+   ServerAdmin webmaster@localhost
+   ServerName {{ http_host }}
+   ServerAlias www.{{ http_host }}
+   DocumentRoot /var/www/{{ http_host }}
+   ErrorLog ${APACHE_LOG_DIR}/error.log
+   CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+   <Directory /var/www/{{ http_host }}>
+         Options -Indexes
+   </Directory>
+
+   <IfModule mod_dir.c>
+       DirectoryIndex index.php index.html index.cgi index.pl  index.xhtml index.htm
+   </IfModule>
+
+</VirtualHost>
+
+
+#####################################################
+
+nano files/info.php.j2
+
+dentro de archivo:
+#####################################################
+
+<?php
+phpinfo();
+
+
+#######################################################
+
+Comandos de las practicas:
+
+Ejecutar archivos:
+
+ansible-playbook practica1.yml -l server3 -u luis --extra-vars "ansible_sudo_pass=01@Bril2000"
+
+
+para verificar las versiones
+
+mysql -V
+php -V
+apache2ctl -V
+python3 -V
+
+Prueba de que se copio los archivos al ubuntu server:
+cd /var/www/
+ls
+cd www.lhernandez.com
+ls
+
+primera prueba en el navegador:
+
+192.168.100.133/menu.html
+192.168.100.133/login.php
+
+Instalar en la base de datos:
+ansible-playbook basededatos.yml -l server3 -u luis --extra-vars "ansible_sudo_pass=01@Bril2000"
+
+prueba de la base de datos:
+
+mysql -u root -p
+admin
+show databases;
+use scorestore
+show tables;
+select * from usuarior;
+exit
+
+Maquina fisica en el navegador:
+se escribe de esta manera ya que son dos archivos menu uno es de administracion 
+y el otro es de los usuarios, en este caso probamos como usuarios.
+
+http://www.lhernandez.com/menu.html
+
+añadir al archivo hosts de la maquina fisica en mi caso debian
+cd /etc
+su
+nano hosts:
+192.168.100.133 www.lhernandez.com
+
+
+http://www.lhernandez.com/menu.html
+http://www.lhernandez.com/login.php
